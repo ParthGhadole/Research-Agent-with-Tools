@@ -1,6 +1,7 @@
 # Python-generated files
 /db
 /outputs
+/.testing
 __pycache__/
 *.py[oc]
 build/
