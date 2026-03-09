@@ -1,4 +1,6 @@
 # Python-generated files
+/db
+/outputs
 __pycache__/
 *.py[oc]
 build/
@@ -8,4 +10,5 @@ wheels/
 
 # Virtual environments
 .venv
-.env
+
+.dfs
