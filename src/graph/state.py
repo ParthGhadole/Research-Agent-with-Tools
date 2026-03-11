@@ -2,30 +2,31 @@ from src.util.models import (
     ResearchRequest,
     Outline,
     GlobalSummary,
-    Section,
-    FactSheet,
-    ResearchPaper
+    GlobalConfig,
+    KnowledgeBase,
+    ResearchDraft,
+    ResearchOutput
 )
-
-from typing import Annotated, List, Optional, Union
+from pydantic import BaseModel
+from typing import Annotated, List, Optional, Union, Dict, Any
 from typing_extensions import TypedDict
 import operator
 from langchain_core.messages import BaseMessage
+import json
 # Graph State
 class ResearchGraphState(TypedDict):
+    global_log: List[BaseMessage]
     messages: List[BaseMessage]
     user_req: ResearchRequest
+    config: GlobalConfig
     outline: Outline
+    knowledge: KnowledgeBase
     global_summary: GlobalSummary
-    sections_completed: Optional[List[Section]]
-    sections_fact_sheet: Optional[List[FactSheet]]
-    pending_section: Optional[Section]
-    human_feedback: Optional[str]
-    current_build_order_index: int
-    # references: Optional[List[str]]
-    paper: Optional[ResearchPaper]
-    paper_path: Optional[str]
+    draft: Optional[ResearchDraft]
+    output: Optional[ResearchOutput]
 
+# TODO: Update later For new Syntax
+# TODO: Test each fucntion before excution
 async def get_detailed_research_status(state: ResearchGraphState) -> dict:
     """
     Analyzes the specific state transitions between nodes to provide
@@ -106,3 +107,20 @@ async def get_detailed_research_status(state: ResearchGraphState) -> dict:
         "status": "Assembling all sections into narrative order and exporting...",
         "progress": 95
     }
+
+
+def print_state_as_json(state: Any):
+    """
+    Safely serializes a state object (dict or Pydantic model) to a 
+    formatted JSON string and prints it.
+    """
+    def json_serializer(obj):
+        # If it's a Pydantic model, convert to dict
+        if isinstance(obj, BaseModel):
+            return obj.model_dump()
+        # Fallback for non-serializable types (like datetime)
+        return str(obj)
+
+    # Use default=json_serializer to handle nested Pydantic objects
+    json_output = json.dumps(state, indent=4, default=json_serializer)
+    print(json_output)

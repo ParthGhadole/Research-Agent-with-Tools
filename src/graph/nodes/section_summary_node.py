@@ -6,7 +6,7 @@ from src.graph.state import ResearchGraphState
 from src.util.models import FactSheet, GlobalSummary
 from src.util.summary_util import format_global_summary_for_prompt
 
-async def summary_node(state : ResearchGraphState) -> ResearchGraphState:
+async def section_summary_node(state : ResearchGraphState) -> ResearchGraphState:
 
     if state["pending_section"] is None:
         return None

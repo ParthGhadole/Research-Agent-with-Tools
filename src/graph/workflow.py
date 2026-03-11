@@ -8,7 +8,7 @@ from src.graph.nodes.assembly_node import assembly_node
 from src.graph.nodes.input_node import input_node    
 from src.graph.nodes.planner_node import planner_node
 from src.graph.nodes.builder_node import builder_node
-from src.graph.nodes.summary_node import summary_node
+from graph.nodes.section_summary_node import section_summary_node
 from src.api.deps import init_checkpointer
 
 def autonomous_router(state: ResearchGraphState):
@@ -34,7 +34,7 @@ async def create_workflow(checkpointer=None):
     workflow.add_node("input", input_node)
     workflow.add_node("planner", planner_node)
     workflow.add_node("builder", builder_node)
-    workflow.add_node("summary", summary_node)
+    workflow.add_node("summary", section_summary_node)
     workflow.add_node("assembly", assembly_node)
 
     # 4. Define Logic

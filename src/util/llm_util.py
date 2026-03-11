@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from custom_azureopenai_langchain import get_azure_chat_openai
 load_dotenv()
 
-def get_llm(provider = "gemini", model = "gemini-2.5-flash-lite", temperature = -1):
+def get_llm(provider = "gemini", model = "gemini-2.5-flash-lite", temperature = -1, max_tokens = 4000):
         
     if provider == "gemini":    
         configs = {
@@ -21,10 +21,13 @@ def get_llm(provider = "gemini", model = "gemini-2.5-flash-lite", temperature = 
             verbose = True
         )
     elif provider == "azureopenai":
+
+        if temperature==-1:
+            temperature = 0.5
         if temperature!=-1 and temperature>0 and temperature<1:
-            return get_azure_chat_openai(temperature = temperature, max_tokens = 2000)
+            return get_azure_chat_openai(temperature = temperature, max_tokens = max_tokens)
         else:
-            return get_azure_chat_openai(temperature = 0.5,max_tokens=2000)
+            return get_azure_chat_openai(temperature = 0.5,max_tokens=max_tokens)
         
     else:
         return ChatGoogleGenerativeAI(
@@ -33,8 +36,7 @@ def get_llm(provider = "gemini", model = "gemini-2.5-flash-lite", temperature = 
                 verbose = True
             )
         
-def get_llm_with_tools(provider ,model, temperature, tools):
-        
+def get_llm_with_tools(tools, provider = "gemini", model = "gemini-2.5-flash-lite", temperature = -1, max_tokens = 4000):        
     if provider == "gemini":    
         configs = {
             "gemini-2.5-flash-lite": 0.2,
@@ -50,9 +52,17 @@ def get_llm_with_tools(provider ,model, temperature, tools):
             verbose = True
         ).bind_tools(tools=tools)
     elif provider == "azureopenai":
+
+        if temperature==-1:
+            temperature = 0.5
         if temperature!=-1 and temperature>0 and temperature<1:
-            return get_llm(provider=provider,temperature=temperature).bind_tools(tools=tools)
+            return get_azure_chat_openai(temperature = temperature, max_tokens = max_tokens).bind_tools(tools=tools)
         else:
-            return get_llm(provider=provider,temperature = 0.5).bind_tools(tools=tools)
+            return get_azure_chat_openai(temperature = 0.5,max_tokens=max_tokens).bind_tools(tools=tools)
         
-    return
+    else:
+        return ChatGoogleGenerativeAI(
+                model = "gemini-2.5-flash-lite", 
+                temperature = 0.2, 
+                verbose = True
+            ).bind_tools(tools=tools)

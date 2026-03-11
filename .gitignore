@@ -1,6 +1,7 @@
 # Python-generated files
 /db
 /outputs
+/data
 /.testing
 __pycache__/
 *.py[oc]
@@ -12,3 +13,5 @@ wheels/
 # Virtual environments
 .venv
 .env
+testeing.ipynb
+test.py

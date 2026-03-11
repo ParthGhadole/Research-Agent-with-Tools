@@ -1,6 +1,21 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict
 
+from typing import List
+from pydantic import BaseModel, Field
+
+class LLMConfig(BaseModel):
+    """The configuration for the LLM"""
+    model: str = "gemini-2.5-flash-lite"
+    provider: str = "gemini"
+    temperature: Optional[float] = 0.5
+    max_tokens: Optional[int] = 4000
+class GraphConfig(BaseModel):
+    """The configuration for the Graph"""
+    research_enabled: Optional[bool] = False
+    max_web_search_limit: Optional[int] = 1
+    max_web_crawl_limit: Optional[int] = 10
+    keep_raw_crawl: Optional[bool] = True
 
 class ResearchRequest(BaseModel):
     """The initial user input schema."""
@@ -9,19 +24,16 @@ class ResearchRequest(BaseModel):
     points_to_include: List[str]
     min_sections: int = 5
     compulsory_headings: List[str]
-    search_enabled: bool = False
-    min_search_limit: int = 1
-    model: str = ""
-    provider: str = ""
 
+class GlobalConfig(BaseModel):
+    llm: LLMConfig = LLMConfig()
+    graph: GraphConfig = GraphConfig()
+    debug: bool = False
 
-# class SectionHeading(BaseModel):
-#     """Schema for a single heading in the roadmap, guiding the AI's workflow."""
-#     heading: str = Field(description="The clear, descriptive title of this specific section.")
-#     position: int = Field(description="The physical location in the final document (e.g., 1 for Intro or abstract, 10 for Conclusion).")
-#     build_order: int = Field(description="The sequence index for the agent to build the paper in.")
-#     section_type: str = Field(description="Category of the section: 'deferred_opening', 'normal', or 'deferred_closing'.")
-#     is_deferred: bool = Field(default=False, description="True if this section requires data from other sections before it can be finalized.")
+class ResearchPayload(BaseModel):
+    user_req: ResearchRequest
+    config: GlobalConfig
+
 class SectionHeading(BaseModel):
     """Schema for a single heading in the roadmap."""
     
@@ -58,8 +70,42 @@ class GlobalSummary(BaseModel):
     open_threads: List[str] = Field(description="Curated live threads — resolved ones are retired each iteration.")
     next_section_expectation: str = Field(description="2-3 sentences max on what the next Builder call must deliver.")
 
-
 class ResearchPaper(BaseModel):
     """The final aggregated research document."""
     topic: str
     content: List[Section]
+
+class RawResearchData(BaseModel):
+    tool_id: str =""
+    tool_name: str = "web_crawl"
+    url: str = "about:blank"
+    raw_content: Optional[str] = None
+    len_content: int = 0
+
+class DetailedKnowledge(BaseModel):
+    tool_id: str
+    tool_name: str
+    url: str
+    summary: str
+    raw_content: Optional[str] = None
+    relevant_headings: List[str] = Field(default_factory=list)
+
+class KnowledgeSummary(BaseModel):
+    summary: str
+    relevant_headings: List[str] = Field(default_factory=list)
+
+class KnowledgeBase(BaseModel):
+    raw_knowledge: List[RawResearchData] = Field(default_factory=list)
+    detailed_knowledge: Dict[str, DetailedKnowledge] = Field(default_factory=dict)
+    knowledge_map: Dict[str, List[str]] = Field(default_factory=dict)
+
+class ResearchDraft(BaseModel):
+    sections_completed: Optional[List[Section]]
+    sections_fact_sheet: Optional[List[FactSheet]]
+    pending_section: Optional[Section]
+    current_build_order_index: int
+
+class ResearchOutput(BaseModel):
+    paper: Optional[ResearchPaper]
+    paper_path: Optional[str]
+

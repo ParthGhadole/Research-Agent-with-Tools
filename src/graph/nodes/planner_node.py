@@ -1,15 +1,38 @@
 # Planner Node
-from src.util.models import ResearchRequest, Outline
+from src.util.models import ResearchRequest, Outline, SectionHeading
 from src.util.prompts import PLANNER_PROMPT
 from src.util.llm_util import get_llm
 from src.graph.state import ResearchGraphState
 from dotenv import load_dotenv
 load_dotenv()
-async def planner_node(state: ResearchGraphState)->ResearchGraphState:
+
+def fix_build_order(headings: list[SectionHeading]) -> tuple[list[SectionHeading], bool]:
+    """If build_order is not sequential from 1, fix it by sorting and reassigning."""
+    orders = sorted(s.build_order for s in headings)
+    expected = list(range(1, len(headings) + 1))
+    if orders == expected:
+        return headings, False  # no fix needed
+
+    # Sort by existing build_order and reassign 1..N
+    sorted_headings = sorted(headings, key=lambda s: s.build_order)
+    for i, section in enumerate(sorted_headings, start=1):
+        section.build_order = i
+    return sorted_headings, True
+
+
+def validate_position_sequence(headings: list[SectionHeading]) -> bool:
+    """Check all positions from 1 to max are present with no gaps or duplicates."""
+    positions = [s.position for s in headings]
+    expected = list(range(1, len(headings) + 1))
+    return sorted(positions) == expected
+
+
+async def planner_node(state: ResearchGraphState) -> ResearchGraphState:
     user_req = state["user_req"]
-
-    llm = get_llm(provider="gemini", model= "gemini-2.5-flash")
-
+    llm_config = state["config"].llm
+    draft = state["draft"]
+    draft.current_build_order_index = 0
+    llm = get_llm(provider=llm_config.provider, model=llm_config.model)
 
     planner_chain = PLANNER_PROMPT | llm.with_structured_output(Outline, include_raw=True)
 
@@ -25,27 +48,28 @@ async def planner_node(state: ResearchGraphState)->ResearchGraphState:
 
     if response.get("parsing_error"):
         raise ValueError(f"LLM failed to follow the schema: {response['parsing_error']}")
-    
+
     parsed_outline = response["parsed"]
+    headings = parsed_outline.headings
 
-    
+    # ── Position check ────────────────────────────────────────────────────────
+    if not validate_position_sequence(headings):
+        positions = sorted(s.position for s in headings)
+        raise ValueError(f"Position sequence is invalid: {positions}. Expected 1 to {len(headings)}.")
 
-    # # 1. Normalize Build Order (Writing Sequence)
-    # # Sort by the LLM's suggested build order and re-index 1..N
-    # sorted_by_build = sorted(parsed_outline.headings, key=lambda h: h.build_order)
-    # for i, heading in enumerate(sorted_by_build, start=1):
-    #     heading.build_order = i
-
-    # # Update the outline object with the corrected headings
-    # parsed_outline.headings = sorted_by_build
-
+    # ── Build order check + auto-fix ──────────────────────────────────────────
+    headings, was_fixed = fix_build_order(headings)
+    if was_fixed:
+        print(f"⚠ build_order was not sequential — auto-corrected by sorting and reassigning 1 to {len(headings)}.")
+        parsed_outline.headings = sorted(headings, key=lambda s: s.position)
 
     return {
-        # **state,
         "outline": parsed_outline,
-        "current_build_order_index": 0,
-        "sections_completed": [],
-        "sections_fact_sheet": []
-        
+        "draft": draft
     }
 
+
+async def test_planner_node(state : ResearchGraphState) -> ResearchGraphState:
+    updates = await planner_node(state)
+    state.update(updates)
+    return state
