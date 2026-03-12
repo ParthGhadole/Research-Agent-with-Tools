@@ -2,8 +2,7 @@ from serpapi import Client
 import os
 from dotenv import load_dotenv
 load_dotenv(".env")
-import httpx
-import json 
+import httpx 
 def filter_search_results(results_list):
     filtered_output = []
     
@@ -55,11 +54,6 @@ async def web_search_tool(query: str) -> list:
         list: A list of urls from global search.
     """
 
-    if query == "machine learning" or "machine learning" in query.lower():
-        with open("data/cleaned_data.json", "r") as f:
-            cleaned_data = json.load(f)
-        return cleaned_data
-    
     params = {
         "engine": "google_scholar",
         "q": query,
