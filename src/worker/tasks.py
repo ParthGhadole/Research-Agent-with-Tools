@@ -1,6 +1,4 @@
-from src.graph.workflow import create_workflow
 from src.util.models import ResearchPayload
-
 
 async def run_research_task(job_id: str, payload: ResearchPayload, app=None):
     """
@@ -12,7 +10,7 @@ async def run_research_task(job_id: str, payload: ResearchPayload, app=None):
     initial_state = {
     "messages": [],
     "user_req": payload.user_req,
-    "confg": payload.config,
+    "config": payload.config,
     "outline": None,
     "knowledge": None,
     "global_summary": None,
@@ -30,9 +28,13 @@ async def run_research_task(job_id: str, payload: ResearchPayload, app=None):
        
         final_state = await app.ainvoke(input=initial_state, config=config)
 
-        paper = final_state.get("paper")
+        paper = final_state.get("output").paper
         
         return paper
 
     except Exception as e:
+        await app.aupdate_state(
+            config, 
+            {"error": {"error": str(e), "failed": True}}
+        )
         raise e

@@ -1,7 +1,6 @@
 
 from src.graph.state import ResearchGraphState
-from src.util.models import ResearchPaper, ResearchRequest, Section
-from typing import List
+from src.util.models import ResearchPaper, ResearchOutput
 from pathlib import Path
 
 import uuid
@@ -27,10 +26,11 @@ def export_paper(paper: ResearchPaper) -> None:
 
     return str(file_path)
 
-def assembly_node(state: ResearchGraphState) -> ResearchGraphState:    
+async def assembly_node(state: ResearchGraphState) -> ResearchGraphState:    
     user_req = state["user_req"]
     outline = state["outline"]  # Accessing the Outline model from state
-    completed_sections = state["sections_completed"]
+    draft = state["draft"]
+    completed_sections = draft.sections_completed
 
     # 1. Create a lookup dictionary using the .heading and .position fields
     # We use .heading because your SectionHeading schema uses that field name
@@ -53,9 +53,17 @@ def assembly_node(state: ResearchGraphState) -> ResearchGraphState:
 
     # Export the paper to your desired format (Markdown/PDF)
     path = export_paper(paper)
-
+    output = ResearchOutput(
+        paper=paper,
+        paper_path=path
+    )
     return {
         # **state,
-        "paper": paper,
-        "paper_path": path
+        "output": output
     }
+
+
+async def test_assembly_node(state : ResearchGraphState) -> ResearchGraphState:
+    updates = await assembly_node(state)
+    state.update(updates)
+    return state

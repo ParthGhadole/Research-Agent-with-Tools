@@ -1,5 +1,5 @@
 # Planner Node
-from src.util.models import ResearchRequest, Outline, SectionHeading
+from src.util.models import Outline, SectionHeading
 from src.util.prompts import PLANNER_PROMPT
 from src.util.llm_util import get_llm
 from src.graph.state import ResearchGraphState
@@ -31,7 +31,6 @@ async def planner_node(state: ResearchGraphState) -> ResearchGraphState:
     user_req = state["user_req"]
     llm_config = state["config"].llm
     draft = state["draft"]
-    draft.current_build_order_index = 0
     llm = get_llm(provider=llm_config.provider, model=llm_config.model)
 
     planner_chain = PLANNER_PROMPT | llm.with_structured_output(Outline, include_raw=True)
@@ -62,7 +61,29 @@ async def planner_node(state: ResearchGraphState) -> ResearchGraphState:
     if was_fixed:
         print(f"⚠ build_order was not sequential — auto-corrected by sorting and reassigning 1 to {len(headings)}.")
         parsed_outline.headings = sorted(headings, key=lambda s: s.position)
+        
+    draft.current_build_order_index = 0
 
+    if state["config"].debug:
+        global_log = state["global_log"]
+        global_log.extend(
+            PLANNER_PROMPT.format_messages(
+                topic=user_req.topic,
+                description=user_req.description,
+                compulsory_headings=user_req.compulsory_headings,
+                points_to_include=user_req.points_to_include,
+                min_sections=user_req.min_sections
+            )
+        )
+        global_log.append(response["raw"])
+
+
+        return{
+            "global_log": global_log,
+            "outline": parsed_outline,
+            "draft": draft
+        }
+    
     return {
         "outline": parsed_outline,
         "draft": draft

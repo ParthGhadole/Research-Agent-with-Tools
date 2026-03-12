@@ -1,16 +1,22 @@
 from src.graph.state import ResearchGraphState
 from langchain_core.messages import ToolMessage
 from src.tools import web_search_tool, web_crawl_tool
-from src.util.models import RawResearchData, KnowledgeBase
+from src.util.models import RawResearchData
+import uuid
 
 async def tool_node(state: ResearchGraphState) -> ResearchGraphState:
+    node_instance_id = uuid.uuid4()  # unique per tool_node invocation
+
     knowledge = state["knowledge"]
     messages = state["messages"]
     last_message = messages[-1]
+    print(f"[TOOL_NODE START] node_instance_id={node_instance_id}, num_tool_calls={len(last_message.tool_calls) if last_message.tool_calls else 0}")
     results = []
     # Check if the last message contains tool calls
     if last_message.tool_calls:
         for tool_call in last_message.tool_calls:
+            call_id = uuid.uuid4()
+            print(f"[TOOL_NODE START] node_instance_id={node_instance_id},[TOOL_NODE ENTRY] call_id={call_id}, tool_call={tool_call}")
             tool_name = tool_call["name"]
             tool_args = tool_call["args"]
 
@@ -44,7 +50,15 @@ async def tool_node(state: ResearchGraphState) -> ResearchGraphState:
             ))
 
     messages.extend(results)
+    if state["config"].debug:
+        global_log = state["global_log"]
+        global_log.extend(results)
 
+        return{
+            "global_log": global_log,
+            "messages": messages,
+            "knowledge": knowledge
+        }
     return {
         "messages": messages,
         "knowledge": knowledge

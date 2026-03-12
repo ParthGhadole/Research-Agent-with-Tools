@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
-
 from typing import List
 from pydantic import BaseModel, Field
 
@@ -10,6 +9,7 @@ class LLMConfig(BaseModel):
     provider: str = "gemini"
     temperature: Optional[float] = 0.5
     max_tokens: Optional[int] = 4000
+    
 class GraphConfig(BaseModel):
     """The configuration for the Graph"""
     research_enabled: Optional[bool] = False

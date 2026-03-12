@@ -1,5 +1,5 @@
 from src.graph.state import ResearchGraphState
-from src.util.models import GlobalSummary,KnowledgeBase,ResearchDraft,ResearchOutput
+from src.util.models import GlobalSummary,KnowledgeBase,ResearchDraft
 
 async def input_node(state : ResearchGraphState) -> ResearchGraphState:
     req = state["user_req"]
@@ -35,6 +35,7 @@ async def input_node(state : ResearchGraphState) -> ResearchGraphState:
         current_build_order_index=-1
     )
     return {
+        "global_log": [],
         "global_summary": globalSummary,
         "knowledge": knowledge,
         "draft": draft

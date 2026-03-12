@@ -8,17 +8,19 @@ from src.util.summary_util import format_global_summary_for_prompt
 
 async def section_summary_node(state : ResearchGraphState) -> ResearchGraphState:
 
-    if state["pending_section"] is None:
-        return None
+    config = state["config"]
+    draft = state["draft"]
+    
+    if draft.pending_section is None:
+        raise ValueError("No pending section to summarize.")
 
-    user_req = state["user_req"]
-    sections_completed = state["sections_completed"]
-    sections_fact_sheet = state["sections_fact_sheet"]
+    _llm = get_llm(provider=config.llm.provider, model=config.llm.model)
 
-    _llm = get_llm(provider=user_req.provider, model=user_req.model)
     summary_chain = SECTION_SUMMARIZER_PROMPT | _llm.with_structured_output(FactSheet, include_raw=True)
     global_summary_chain = GLOBAL_SUMMARY_UPDATER_PROMPT | _llm.with_structured_output(GlobalSummary, include_raw=True)
-    current_section = state["pending_section"]
+    
+    current_section = draft.pending_section
+
     summary_response = await summary_chain.ainvoke({
         "section_content": current_section.content
     })
@@ -56,14 +58,50 @@ async def section_summary_node(state : ResearchGraphState) -> ResearchGraphState
     if global_summary_response.get("parsing_error"):
         raise ValueError(f"LLM failed to follow the schema: {global_summary_response['parsing_error']}")
     
-    idx = state["current_build_order_index"]+1
-    sections_completed.append(current_section)
-    sections_fact_sheet.append(fact_sheet)
+    draft.current_build_order_index = draft.current_build_order_index +1 
+    draft.sections_completed.append(current_section)
+    draft.sections_fact_sheet.append(fact_sheet)
+    draft.pending_section = None
+
+    if state["config"].debug:
+        global_log = state["global_log"]
+        global_log.extend(
+            SECTION_SUMMARIZER_PROMPT.format_messages(
+                section_content=current_section.content
+            )
+        )
+        global_log.append(summary_response["raw"])
+
+        global_log.extend(
+            GLOBAL_SUMMARY_UPDATER_PROMPT.format_messages(
+                prev_sections_covered=formatted_prev["sections_covered"],
+                prev_established_facts=formatted_prev["established_facts"],
+                prev_narrative_position=formatted_prev["narrative_position"],
+                prev_open_threads=formatted_prev["open_threads"],
+                prev_next_section_expectation=formatted_prev["next_section_expectation"],
+                fact_sheet=formatted_fact_sheet,
+                outline=formatted_outline,
+                current_heading=current_section.heading,
+            )
+        )
+        global_log.append(global_summary_response["raw"])
+
+        return {
+            "global_log" : global_log,
+            "draft" : draft,
+            "global_summary" : global_summary_response["parsed"],
+        }
+
     return {
         # **state,
-        "sections_completed" : sections_completed,
-        "sections_fact_sheet" : sections_fact_sheet,
-        "pending_section" : None,
+        "draft" : draft,
         "global_summary" : global_summary_response["parsed"],
-        "current_build_order_index" : idx
+
     }
+
+
+
+async def test_section_summary_node(state : ResearchGraphState) -> ResearchGraphState:
+    updates = await section_summary_node(state)
+    state.update(updates)
+    return state
