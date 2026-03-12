@@ -438,7 +438,7 @@ if page == "[>] Start Research":
             )
             llm_provider = st.selectbox(
                 "Provider",
-                ["azureopenai", "openai", "anthropic", "google", "groq", "ollama"],
+                ["azureopenai", "gemini"],
                 help="LLM backend provider"
             )
             llm_max_tokens = st.number_input(
