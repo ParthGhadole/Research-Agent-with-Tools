@@ -5,18 +5,13 @@ from src.util.models import RawResearchData
 import uuid
 
 async def tool_node(state: ResearchGraphState) -> ResearchGraphState:
-    node_instance_id = uuid.uuid4()  # unique per tool_node invocation
-
     knowledge = state["knowledge"]
     messages = state["messages"]
     last_message = messages[-1]
-    print(f"[TOOL_NODE START] node_instance_id={node_instance_id}, num_tool_calls={len(last_message.tool_calls) if last_message.tool_calls else 0}")
     results = []
     # Check if the last message contains tool calls
     if last_message.tool_calls:
         for tool_call in last_message.tool_calls:
-            call_id = uuid.uuid4()
-            print(f"[TOOL_NODE START] node_instance_id={node_instance_id},[TOOL_NODE ENTRY] call_id={call_id}, tool_call={tool_call}")
             tool_name = tool_call["name"]
             tool_args = tool_call["args"]
 
